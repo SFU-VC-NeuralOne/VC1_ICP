@@ -12,6 +12,8 @@
 #include <icp_slam/icp_slam.h>
 #include <icp_slam/utils.h>
 #include <icp_slam/config.h>
+#include <iostream>
+using namespace std;
 
 #define TIME_DIFF(tic, toc) ((std::chrono::duration<double, std::milli>((toc) - (tic))).count())
 
@@ -39,6 +41,14 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     ROS_WARN_THROTTLE(1.0, "Couldn't track frame, tracker already running");
     return false;
   }
+  is_tracker_running_ = true;
+  if(isCreateKeyframe(current_frame_tf_odom_laser, last_kf_tf_odom_laser_)){
+    cout<<"key frame created!!"<<endl;
+    last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
+  }
+  is_tracker_running_ = false;
+
+  
 
   // TODO: find the pose of laser in map frame
   // if a new keyframe is created, run ICP
@@ -51,6 +61,34 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   assert(current_frame_tf.child_frame_id_ == last_kf_tf.child_frame_id_);
 
   // TODO: check whether you want to create keyframe (based on max_keyframes_distance_, max_keyframes_angle_, max_keyframes_time_)
+  bool is_keyframe = false;
+
+  cv::Point a(current_frame_tf.getOrigin().getX(), current_frame_tf.getOrigin().getY());
+  cv::Point b(last_kf_tf.getOrigin().getX(), last_kf_tf.getOrigin().getY());
+
+  double distance = cv::norm(a-b);
+  cout<<distance<<"thats the distance!!!!"<<endl;
+
+  if(distance>=max_keyframes_distance_){
+  return true;}
+
+  double angle_now = tf::getYaw((current_frame_tf.getRotation()) * 180 / M_PI);
+  double angle_previous = tf::getYaw((last_kf_tf.getRotation()) * 180 / M_PI);  
+  double angle = 0.0;
+  if (angle_now >= angle_previous){
+    angle = angle_now-angle_previous;
+    }else{
+      angle = angle_previous-angle_now;
+      }
+
+  if(angle>=max_keyframes_angle_){
+    return true;
+    }
+  if((double)(current_frame_tf.stamp_.toSec() - last_kf_tf.stamp_.toSec()) >= max_keyframes_time_){
+    return true;
+  }
+
+  return false;
 }
 
 void ICPSlam::closestPoints(cv::Mat &point_mat1,

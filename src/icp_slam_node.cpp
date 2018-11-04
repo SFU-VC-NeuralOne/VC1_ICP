@@ -11,7 +11,8 @@
 
 #include <icp_slam/icp_slam.h>
 #include <icp_slam/mapper.h>
-
+#include <iostream>
+using namespace std;
 using namespace icp_slam;
 
 /**
@@ -63,17 +64,16 @@ protected:
 
 ICPSlamNode::ICPSlamNode() : local_nh_("~")
 {
-  laser_sub_ = global_nh_.subscribe("base_scan", 10, &ICPSlamNode::laserCallback, this);
+  laser_sub_ = global_nh_.subscribe("scan", 10, &ICPSlamNode::laserCallback, this);
   map_publisher_ = local_nh_.advertise<nav_msgs::OccupancyGrid>("map", 1);
 
   // getting ROS parameters:
   // local_nh_.param<TYPE>(PARAM_NAME, OUTPUT_VARIABLE, DEFAULT_VALUE)
-
   double map_update_interval;
   local_nh_.param("map_update_interval", map_update_interval, 5.0);
   map_publish_interval_.fromSec(map_update_interval);
 
-  local_nh_.param<std::string>("odom_frame", odom_frame_id_, "odom");
+  local_nh_.param<std::string>("odom_frame", odom_frame_id_, "/odom");
   local_nh_.param<std::string>("map_frame", map_frame_id_, "map");
 
   // SLAM parameterss
@@ -111,9 +111,10 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 {
 
   static ros::Time last_map_update(0, 0);
-
   // TODO: get laser pose in odom frame (using tf)
   tf::StampedTransform tf_odom_laser;
+  tf_listener_.transformPose(odom_frame_id_, laser_msg, tf_odom_laser);
+  //tf_odom_laser.stamp_ = ros::Time::now();
 
   // current pose
   tf::StampedTransform tf_map_laser;
