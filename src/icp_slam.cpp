@@ -42,12 +42,15 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     return false;
   }
   is_tracker_running_ = true;
+  last_kf_tf_odom_laser_.frame_id_ = "odom";
+  last_kf_tf_odom_laser_.child_frame_id_ = "base_link";
   if(isCreateKeyframe(current_frame_tf_odom_laser, last_kf_tf_odom_laser_)){
     cout<<"key frame created!!"<<endl;
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
+    tf_map_laser = current_frame_tf_odom_laser; //temp
   }
   is_tracker_running_ = false;
-
+  return true;
   
 
   // TODO: find the pose of laser in map frame
@@ -57,17 +60,19 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
 
 bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const
 {
+  // cout<<"current frame "<<current_frame_tf.frame_id_<<"last frame "<<last_kf_tf.frame_id_<<endl;
+  // cout<<"current frame child "<<current_frame_tf.child_frame_id_<<"last frame child "<<last_kf_tf.child_frame_id_<<endl;
   assert(current_frame_tf.frame_id_ == last_kf_tf.frame_id_);
   assert(current_frame_tf.child_frame_id_ == last_kf_tf.child_frame_id_);
 
   // TODO: check whether you want to create keyframe (based on max_keyframes_distance_, max_keyframes_angle_, max_keyframes_time_)
   bool is_keyframe = false;
 
-  cv::Point a(current_frame_tf.getOrigin().getX(), current_frame_tf.getOrigin().getY());
-  cv::Point b(last_kf_tf.getOrigin().getX(), last_kf_tf.getOrigin().getY());
+  cv::Point2d a(current_frame_tf.getOrigin().getX(), current_frame_tf.getOrigin().getY());
+  cv::Point2d b(last_kf_tf.getOrigin().getX(), last_kf_tf.getOrigin().getY());
 
   double distance = cv::norm(a-b);
-  cout<<distance<<"thats the distance!!!!"<<endl;
+  cout<<"a:"<<a<< " b:"<<b<<" distance:"<<distance<<endl;
 
   if(distance>=max_keyframes_distance_){
   return true;}

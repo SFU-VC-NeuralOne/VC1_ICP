@@ -51,8 +51,8 @@ protected:
   double origin_x_;
   double origin_y_;
 
-  unsigned int width_;    ///< @brief width of the map
-  unsigned int height_;   ///< @brief height of the map
+  int width_;    ///< @brief width of the map
+  int height_;   ///< @brief height of the map
 
   double resolution_;
   Mapper mapper_;
@@ -90,6 +90,9 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   local_nh_.param("ymin", y_min_, -15.0);
   local_nh_.param("xmax", x_max_, 15.0);
   local_nh_.param("ymax", y_max_, 15.0);
+  local_nh_.param("width", width_, 30);
+  local_nh_.param("height", height_, 30);
+  // local_nh_.param("height", origin_, 30.0);
 
   // TODO: initialize the map (width_, height_, origin_)
 
@@ -112,8 +115,10 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 
   static ros::Time last_map_update(0, 0);
   // TODO: get laser pose in odom frame (using tf)
+  try {
   tf::StampedTransform tf_odom_laser;
-  tf_listener_.transformPose(odom_frame_id_, laser_msg, tf_odom_laser);
+  cout<<"the time: "<<last_map_update<< endl;
+  tf_listener_.lookupTransform(odom_frame_id_, "base_link", last_map_update,tf_odom_laser);
   //tf_odom_laser.stamp_ = ros::Time::now();
 
   // current pose
@@ -122,12 +127,39 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
   if (is_keyframe)
   {
     //TODO: update the map
+    occupancy_grid_.data = {0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    0,0,0,0,0,100,100,100,100, 100
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
+    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100
+    };
   }
-
+  publishMap(laser_msg->header.stamp);
   if (laser_msg->header.stamp - last_map_update > map_publish_interval_)
   {
     publishMap(laser_msg->header.stamp);
   }
+  }
+  catch (tf::TransformException &ex) {
+    ROS_ERROR("%s", ex.what());
+    ros::Duration(1.0).sleep();
+ }
+  
 
   // TODO: broadcast odom to map transform (using tf)
 }
@@ -135,6 +167,10 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 void ICPSlamNode::publishMap(ros::Time timestamp)
 {
   // TODO: publish the occupancy grid map
+  cout<<"publishing mapp!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+  //cout<<occupancy_grid_<<endl;
+  map_publisher_.publish(occupancy_grid_);
+
 }
 
 int main(int argc, char **argv)
