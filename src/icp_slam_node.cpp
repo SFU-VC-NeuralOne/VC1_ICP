@@ -73,7 +73,7 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   local_nh_.param("map_update_interval", map_update_interval, 5.0);
   map_publish_interval_.fromSec(map_update_interval);
 
-  local_nh_.param<std::string>("odom_frame", odom_frame_id_, "/odom");
+  local_nh_.param<std::string>("odom_frame", odom_frame_id_, "odom");
   local_nh_.param<std::string>("map_frame", map_frame_id_, "map");
 
   // SLAM parameterss
