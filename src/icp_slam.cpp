@@ -68,7 +68,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   // if not a keyframe, obtain the laser pose in map frame based on odometry update
 }
 
-bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) 
+bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const 
 {
   // cout<<"current frame "<<current_frame_tf.frame_id_<<"last frame "<<last_kf_tf.frame_id_<<endl;
   // cout<<"current frame child "<<current_frame_tf.child_frame_id_<<"last frame child "<<last_kf_tf.child_frame_id_<<endl;
@@ -240,11 +240,8 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   std::vector<int> closest_indices;
   std::vector<float> closest_distances_2;
   closestPoints(points1, points2, closest_indices, closest_distances_2);
-  reorder(points2, closest_indices);
-  icpIteration();
-  
-
-
+  //re_order(points2, closest_indices);
+  //icpIteration();
 
 }
                                     
