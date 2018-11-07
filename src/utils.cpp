@@ -12,6 +12,23 @@ namespace utils
 cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &scan)
 {
   // TODO
+  int laser_size = (scan->angle_max - scan->angle_min)/scan->angle_increment;
+  float[laser_size][2] points;
+  
+  for(int i=0 ;i<laser_size; i++)
+  {
+    float x;
+    float y;
+    float r = scan->ranges[i];
+    float a = scan->angle_min + (scan->angle_increment)*i;
+    polarToCartesian(r, a, &x, &y);
+    points[i][0] = x;
+    points[i][1] = y;
+  }
+
+  cv::Mat point_mat = cv::Mat(laser_size, 2, CV_32FC1, &points);
+  return point_mat; 
+
 }
 
 cv::Mat transformPointMat(tf::Transform transform, cv::Mat &point_mat)

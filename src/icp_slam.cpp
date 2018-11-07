@@ -34,7 +34,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
                     const tf::StampedTransform &current_frame_tf_odom_laser,
                     tf::StampedTransform &tf_map_laser)
 {
-
+  //laser_scan is pointer it might be change, might need to save the content
 
   if (is_tracker_running_)
   {
@@ -42,10 +42,20 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     return false;
   }
   is_tracker_running_ = true;
+
   last_kf_tf_odom_laser_.frame_id_ = "odom";
   last_kf_tf_odom_laser_.child_frame_id_ = "base_link";
+
   if(isCreateKeyframe(current_frame_tf_odom_laser, last_kf_tf_odom_laser_)){
     cout<<"key frame created!!"<<endl;
+
+    tf::Transform tf_estimation = current_frame_tf_odom_laser.inverse() * last_kf_tf_odom_laser_ ;
+    tf_map_laser = tf::StampedTransform(icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation),
+                                        current_frame_tf_odom_laser.stamp_,
+                                         "map",
+                                         "odom");
+
+    
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
     tf_map_laser = current_frame_tf_odom_laser; //temp
   }
@@ -58,7 +68,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   // if not a keyframe, obtain the laser pose in map frame based on odometry update
 }
 
-bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const
+bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) 
 {
   // cout<<"current frame "<<current_frame_tf.frame_id_<<"last frame "<<last_kf_tf.frame_id_<<endl;
   // cout<<"current frame child "<<current_frame_tf.child_frame_id_<<"last frame child "<<last_kf_tf.child_frame_id_<<endl;
@@ -94,7 +104,7 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   }
 
   return false;
-}
+} 
 
 void ICPSlam::closestPoints(cv::Mat &point_mat1,
                             cv::Mat &point_mat2,
@@ -218,6 +228,26 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
   cv::flip(img, tmp, 0);
   cv::imwrite("/tmp/icp_laser.png", img);
 }
+
+tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan1,
+                                    const sensor_msgs::LaserScanConstPtr &laser_scan2,
+                                    const tf::Transform &T_2_1)
+{
+  //2*T21
+  cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
+  cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
+  cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
+  std::vector<int> closest_indices;
+  std::vector<float> closest_distances_2;
+  closestPoints(points1, points2, closest_indices, closest_distances_2);
+  reorder(points2, closest_indices);
+  icpIteration();
+  
+
+
+
+}
+                                    
 
 } // namespace icp_slam
 
