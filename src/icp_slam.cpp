@@ -68,7 +68,9 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<endl;
     cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<endl;
     cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getY()<<endl;
-    tf_map_laser = tf::StampedTransform(icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation),
+    tf::Transform refined_tf = icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation);
+    
+    tf_map_laser = tf::StampedTransform(,
                                         current_frame_tf_odom_laser.stamp_,
                                          "map",
                                          "odom");
@@ -110,7 +112,7 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   double angle = 0.0;
   if (angle_now >= angle_previous){
     angle = angle_now-angle_previous;
-    }else{
+    }else{map
       angle = angle_previous-angle_now;
       }
 
@@ -271,8 +273,8 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   std::vector<int> closest_indices;
   std::vector<float> closest_distances_2;
   cv::Mat points2_ordered = closestPoints(points1, points2, closest_indices, closest_distances_2);
-  //re_order(points2, closest_indices);
   tf::Transform refined_T_2_1 = icpIteration(points1, points2_ordered);
+  return refined_T_2_1;
 
 }
 
@@ -300,15 +302,23 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   cv::reduce(point_mat1, up, 0, CV_REDUCE_AVG);
   
   cv::Mat x_prime;
-  subtract(point_mat1,(cv::Scalar)(u1.at<float>(0,0), u1.at<float>(0,0)),x_prime);
+  subtract(point_mat1,(cv::Scalar)(ux.at<float>(0,0), ux.at<float>(0,0)),x_prime);
 
   cv::Mat p_prime;
-  subtract(point_mat2,(cv::Scalar)(u2.at<float>(0,0), u1.at<float>(0,0)),p_prime);
+  subtract(point_mat2,(cv::Scalar)(up.at<float>(0,0), up.at<float>(0,0)),p_prime);
   
-  cv::SVD svd(x_prime * p_prime.inverse());
+  cv::SVD svd(x_prime * p_prime.t());
 
-  tf::Transform a;
-  return a;
+  cv::Mat r = svd.u*svd.vt;
+  cv::Mat t = ux - r * up;
+
+  float rotation = atan2(r.at<float>(0,1), r.at<float>(0,0));
+
+  tf::Transform refined_T_2_1;
+  refined_T_2_1.setOrigin(tf::Vector3(t.at<float>(0,0),t.at<float>(0,1),0.0));
+  refined_T_2_1.setRotation(tf::createQuaternionFromYaw(rotation));
+
+  return refined_T_2_1;
 
 }               
 
