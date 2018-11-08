@@ -279,12 +279,36 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
                                     cv::Mat &point_mat2) 
 {
-  cv::Scalar u1 = mean( point_mat1.col(0) );
-  cv::Scalar u1_y = mean( point_mat1.col(1) );
-  cv::Scalar u2 = mean( point_mat2 );
-  cout<<"===============================u1 is "<<u1<<" "<<u1_y;
-  // tf::Transform a;
-  // return a;
+  // cv::Mat test(5,2,CV_32F);
+  // for(int i=0; i<5; i++)
+  // {
+  //   test.at<float>(i,0)=i+0.5;
+  //   test.at<float>(i,1)=i+1.5;
+  // }
+  // cv::Mat u1;
+  // cv::reduce(test, u1, 0, CV_REDUCE_AVG);
+  // cout<<"here is test !!!!!!!!!!!!!!!!!!!!!"<<test<<endl;
+  // cout<<"here is test mean!!!!!!!!!!!!!!!!!!!!!"<<u1<<endl;
+  // cv::Mat subs;
+  // subtract(test,(cv::Scalar)(u1.at<float>(0,0), u1.at<float>(0,0)),subs);
+  // cout<<"try substract"<<subs<<endl;
+
+  
+  cv::Mat ux;
+  cv::reduce(point_mat1, ux, 0, CV_REDUCE_AVG);
+  cv::Mat up;
+  cv::reduce(point_mat1, up, 0, CV_REDUCE_AVG);
+  
+  cv::Mat x_prime;
+  subtract(point_mat1,(cv::Scalar)(u1.at<float>(0,0), u1.at<float>(0,0)),x_prime);
+
+  cv::Mat p_prime;
+  subtract(point_mat2,(cv::Scalar)(u2.at<float>(0,0), u1.at<float>(0,0)),p_prime);
+  
+  cv::SVD svd(x_prime * p_prime.inverse());
+
+  tf::Transform a;
+  return a;
 
 }               
 
