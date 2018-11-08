@@ -153,9 +153,9 @@ cv::Mat ICPSlam::closestPoints(cv::Mat &point_mat1,
   for (int i=0;i<mat_indices.rows;++i) {
   closest_indices[i] = indices_ptr[i];
   if(closest_indices[i] == -1){
-  xy_values.at<cv::Mat>(i) = point_mat1.at<cv::Mat>(closest_indices[i]);
+  xy_values.row(i) = point_mat1.row(closest_indices[i]);
   }else{
-  xy_values.at<cv::Mat>(i) = point_mat2.at<cv::Mat>(closest_indices[i]);
+  xy_values.row(i) = point_mat2.row(closest_indices[i]);
   }
 
   return xy_values;
@@ -270,12 +270,23 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 
   std::vector<int> closest_indices;
   std::vector<float> closest_distances_2;
-  cv::Mat point2_ordered = closestPoints(points1, points2, closest_indices, closest_distances_2);
+  cv::Mat points2_ordered = closestPoints(points1, points2, closest_indices, closest_distances_2);
   //re_order(points2, closest_indices);
-  tf::Transform refined_T_2_1 = icpIteration(point1, point2_ordered);
+  tf::Transform refined_T_2_1 = icpIteration(points1, points2_ordered);
 
 }
-                                    
+
+tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
+                                    cv::Mat &point_mat2) 
+{
+  cv::Scalar u1 = mean( point_mat1.col(0) );
+  cv::Scalar u1_y = mean( point_mat1.col(1) );
+  cv::Scalar u2 = mean( point_mat2 );
+  cout<<"===============================u1 is "<<u1<<" "<<u1_y;
+  // tf::Transform a;
+  // return a;
+
+}               
 
 } // namespace icp_slam
 
