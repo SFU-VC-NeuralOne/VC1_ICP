@@ -25,7 +25,8 @@ ICPSlam::ICPSlam(tfScalar max_keyframes_distance, tfScalar max_keyframes_angle, 
     max_keyframes_angle_(max_keyframes_angle),
     max_keyframes_time_(max_keyframes_time),
     last_kf_laser_scan_(new sensor_msgs::LaserScan()),
-    is_tracker_running_(false)
+    is_tracker_running_(false),
+    is_first_frame_(true)
 {
   last_kf_tf_odom_laser_.stamp_ = ros::Time(0);
 }
@@ -44,12 +45,29 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   is_tracker_running_ = true;
 
   last_kf_tf_odom_laser_.frame_id_ = "odom";
-  last_kf_tf_odom_laser_.child_frame_id_ = "base_link";
+  last_kf_tf_odom_laser_.child_frame_id_ = current_frame_tf_odom_laser.child_frame_id_;
 
+  if(is_first_frame_){ //initialzation
+    *last_kf_laser_scan_ = *laser_scan;
+    last_kf_tf_odom_laser_=current_frame_tf_odom_laser;
+    tf::StampedTransform tf_map_odom;
+    tf_map_odom.frame_id_ = "map";
+    tf_map_odom.child_frame_id_ = "odom";
+    tf_map_odom.stamp_ = ros::Time::now();
+    tf_map_odom.setOrigin(tf::Vector3(0, 0, 0));
+    tf_map_odom.setRotation(tf::createQuaternionFromYaw(0.0));
+    tf_map_laser = tf_map_odom;
+    is_tracker_running_=false;
+    is_first_frame_=false;
+    return true;
+  }
   if(isCreateKeyframe(current_frame_tf_odom_laser, last_kf_tf_odom_laser_)){
     cout<<"key frame created!!"<<endl;
 
     tf::Transform tf_estimation = current_frame_tf_odom_laser.inverse() * last_kf_tf_odom_laser_ ;
+    cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<endl;
+    cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<endl;
+    cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getY()<<endl;
     tf_map_laser = tf::StampedTransform(icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation),
                                         current_frame_tf_odom_laser.stamp_,
                                          "map",
@@ -57,7 +75,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
 
     
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
-    tf_map_laser = current_frame_tf_odom_laser; //temp
+    *last_kf_laser_scan_ = *laser_scan;
   }
   is_tracker_running_ = false;
   return true;
@@ -71,7 +89,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
 bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const 
 {
   // cout<<"current frame "<<current_frame_tf.frame_id_<<"last frame "<<last_kf_tf.frame_id_<<endl;
-  // cout<<"current frame child "<<current_frame_tf.child_frame_id_<<"last frame child "<<last_kf_tf.child_frame_id_<<endl;
+  //cout<<"current frame child "<<current_frame_tf.child_frame_id_<<"last frame child "<<last_kf_tf.child_frame_id_<<endl;
   assert(current_frame_tf.frame_id_ == last_kf_tf.frame_id_);
   assert(current_frame_tf.child_frame_id_ == last_kf_tf.child_frame_id_);
 
@@ -106,7 +124,7 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   return false;
 } 
 
-void ICPSlam::closestPoints(cv::Mat &point_mat1,
+cv::Mat ICPSlam::closestPoints(cv::Mat &point_mat1,
                             cv::Mat &point_mat2,
                             std::vector<int> &closest_indices,
                             std::vector<float> &closest_distances_2)
@@ -130,9 +148,19 @@ void ICPSlam::closestPoints(cv::Mat &point_mat1,
 
   int* indices_ptr = mat_indices.ptr<int>(0);
   //float* dists_ptr = mat_dists.ptr<float>(0);
+  cv::Mat xy_values(point_mat2.rows, 2, CV_32F);
+
   for (int i=0;i<mat_indices.rows;++i) {
-    closest_indices[i] = indices_ptr[i];
+  closest_indices[i] = indices_ptr[i];
+  if(closest_indices[i] == -1){
+  xy_values.at<cv::Mat>(i) = point_mat1.at<cv::Mat>(closest_indices[i]);
+  }else{
+  xy_values.at<cv::Mat>(i) = point_mat2.at<cv::Mat>(closest_indices[i]);
   }
+
+  return xy_values;
+
+}
 
   mat_dists.copyTo(cv::Mat(closest_distances_2));
 
@@ -237,11 +265,14 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
   cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
+
+  vizClosestPoints(points1, points2, T_2_1);
+
   std::vector<int> closest_indices;
   std::vector<float> closest_distances_2;
-  closestPoints(points1, points2, closest_indices, closest_distances_2);
+  cv::Mat point2_ordered = closestPoints(points1, points2, closest_indices, closest_distances_2);
   //re_order(points2, closest_indices);
-  //icpIteration();
+  tf::Transform refined_T_2_1 = icpIteration(point1, point2_ordered);
 
 }
                                     

@@ -167,7 +167,7 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 void ICPSlamNode::publishMap(ros::Time timestamp)
 {
   // TODO: publish the occupancy grid map
-  cout<<"publishing mapp!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+  //cout<<"publishing mapp!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
   //cout<<occupancy_grid_<<endl;
   map_publisher_.publish(occupancy_grid_);
 

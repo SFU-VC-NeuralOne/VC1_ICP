@@ -81,7 +81,7 @@ public:
    * @param dists square of distances of the correspondences
    * @todo to be replaced by k-d tree based methods
    */
-  static void closestPoints(cv::Mat &point_mat1,
+  static cv::Mat closestPoints(cv::Mat &point_mat1,
                             cv::Mat &point_mat2,
                             std::vector<int> &closest_indices,
                             std::vector<float> &closest_distances_2);
@@ -103,6 +103,7 @@ protected:
   sensor_msgs::LaserScanPtr last_kf_laser_scan_;     ///< laser scan of last kf
   tf::StampedTransform last_kf_tf_odom_laser_;    ///< Transform in odom frame of last keyframe
   tf::StampedTransform last_kf_tf_map_laser_;     ///< Transform in map frame of last keyframe
+  bool is_first_frame_;
 
 
   tfScalar max_keyframes_distance_;
