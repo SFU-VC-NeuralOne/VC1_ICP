@@ -93,7 +93,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
 
   // TODO: find the pose of laser in map frame
   // if a new keyframe is created, run ICP
-  // if not a keyframe, obtain the laser pose in map frame based on odometry update
+  // if not a keyframe, obtacv::Mat points1in the laser pose in map frame based on odometry update
 }
 
 bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const 
@@ -110,7 +110,7 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   cv::Point2d b(last_kf_tf.getOrigin().getX(), last_kf_tf.getOrigin().getY());
 
   double distance = cv::norm(a-b);
-  cout<<"a:"<<a<< " b:"<<b<<" distance:"<<distance<<endl;
+  //cout<<"a:"<<a<< " b:"<<b<<" distance:"<<distance<<endl;
 
   if(distance>=max_keyframes_distance_){
   return true;}
@@ -127,14 +127,61 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   if(angle>=max_keyframes_angle_){
     return true;
     }
-  if((double)(current_frame_tf.stamp_.toSec() - last_kf_tf.stamp_.toSec()) >= max_keyframes_time_){
-    return true;
-  }
+  // if((double)(current_frame_tf.stamp_.toSec() - last_kf_tf.stamp_.toSec()) >= max_keyframes_time_){
+  //   return true;
+  // }
 
   return false;
 } 
 
-cv::Mat ICPSlam::closestPoints(cv::Mat &point_mat1,
+void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
+                                    cv::Mat &point_mat2,
+                                    std::vector<int> &closest_indices,
+                                    std::vector<float> &closest_distances_2,
+                                    cv::Mat &points1_out,
+                                    cv::Mat &points2_out)
+{
+
+  float mean;
+  float std_dev;
+  utils::meanAndStdDev(closest_distances_2, mean, std_dev);
+
+  // cv::Mat intersection_point_mat1; // = point_mat1.at(i);
+  // cv::Mat intersection_point_mat2; // = point_mat2.at(closest_indices.at(i));
+
+  cv::Mat mat_indices(point_mat1.rows, 1, CV_32S);
+
+  int j = 0;
+  for (int i=0;i<mat_indices.rows;++i) {
+    if(closest_distances_2[i] <= mean+2*(std_dev) || closest_distances_2[i] >= mean-2*(std_dev)){
+      if((point_mat1.at<float>(i,0) == 0.0) || (point_mat2.at<float>(i,0) == 0.0))
+      {
+        // cout<<"found a absolute zero!!"<<endl;
+        continue;
+      }
+      else if(j == 0){
+        point_mat1.row(i).copyTo(points1_out);
+        point_mat2.row(closest_indices[i]).copyTo(points2_out);
+        j = j+1;
+      }else{
+        cv::Mat intersection_1_to_append; // = point_mat1.at(i);
+        cv::Mat intersection_2_to_append; // = point_mat2.at(closest_indices.row(i));
+        point_mat1.row(i).copyTo(intersection_1_to_append);
+        // cv::vconcat(intersection_point_mat1, intersection_1_to_append, intersection_point_mat1);
+        points1_out.push_back(intersection_1_to_append);
+        point_mat2.row(closest_indices[i]).copyTo(intersection_2_to_append);
+        // cv::vconcat(intersection_point_mat2, intersection_2_to_append, intersection_point_mat2);
+        points2_out.push_back(intersection_2_to_append);
+        j = j+1;
+      }
+    }
+  }
+
+}
+
+
+
+void ICPSlam::closestPoints(cv::Mat &point_mat1,
                             cv::Mat &point_mat2,
                             std::vector<int> &closest_indices,
                             std::vector<float> &closest_distances_2)
@@ -158,19 +205,9 @@ cv::Mat ICPSlam::closestPoints(cv::Mat &point_mat1,
 
   int* indices_ptr = mat_indices.ptr<int>(0);
   //float* dists_ptr = mat_dists.ptr<float>(0);
-  cv::Mat xy_values(point_mat2.rows, 2, CV_32F);
-
   for (int i=0;i<mat_indices.rows;++i) {
-  closest_indices[i] = indices_ptr[i];
-  if(closest_indices[i] == -1){
-  xy_values.row(i) = point_mat1.row(closest_indices[i]);
-  }else{
-  xy_values.row(i) = point_mat2.row(closest_indices[i]);
+    closest_indices[i] = indices_ptr[i];
   }
-
-  return xy_values;
-
-}
 
   mat_dists.copyTo(cv::Mat(closest_distances_2));
 
@@ -275,13 +312,46 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
   cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
-
+  tf::Transform refined_T_2_1;
   vizClosestPoints(points1, points2, T_2_1);
+  
+  
+  // cout<<"this is matrix point 2!!!!!!"<<points2<<endl;
 
-  std::vector<int> closest_indices;
-  std::vector<float> closest_distances_2;
-  cv::Mat points2_ordered = closestPoints(points1, points2, closest_indices, closest_distances_2);
-  tf::Transform refined_T_2_1 = icpIteration(points1, points2_ordered);
+  
+  cv::Point2d previous_point;
+  double previous_a;
+  double dis_threshold = 0.00001;
+  double angle_threshold = 0.00001;
+
+  for(int i =0; i<30; i++){
+    std::vector<int> closest_indices;
+    std::vector<float> closest_distances_2;
+    closestPoints(points1, points2_new, closest_indices, closest_distances_2);
+
+    cv::Mat points1_out;
+    cv::Mat points2_out;
+
+    intersectionPoints(points1, points2, closest_indices, closest_distances_2, points1_out, points2_out);
+    refined_T_2_1 = icpIteration(points1_out, points2_out);
+    cv::Mat points2_new = utils::transformPointMat(refined_T_2_1, points2);
+
+    cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
+    double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
+
+    if(i > 0){
+      double distance = cv::norm(this_point-previous_point);
+      float rot = abs(previous_a-this_a);
+      if((distance <= dis_threshold) && (rot <= angle_threshold)){
+        return refined_T_2_1;
+      }
+    }
+    previous_point = this_point;
+    // this_point.copyTo(previous_point);
+    previous_a = this_a;
+    cout<<i<<endl;
+  }
+  
   return refined_T_2_1;
 
 }
@@ -315,16 +385,19 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   cv::Mat p_prime;
   subtract(point_mat2,(cv::Scalar)(up.at<float>(0,0), up.at<float>(0,0)),p_prime);
   
+  // cout<<"this is xprime "<<x_prime<<endl;
+  // cout<<"this is point_mat2 "<<point_mat2<<endl;
   cv::SVD svd(x_prime.t()* p_prime);
-  cout<<"this is w "<<x_prime.t()* p_prime<<endl;
+  
   
   cv::Mat r = svd.u*svd.vt;
-  cout<<"this is r "<<r<<endl;
+  // cout<<"this is r "<<r<<endl;
   cv::Mat t = ux - up*r ;
-  cout<<"im here!!!!!!!!!!!!!"<<endl;
+  // cout<<"im here!!!!!!!!!!!!!"<<endl;
   
   float rotation = atan2(r.at<float>(0,1), r.at<float>(0,0));
-
+  cout<<"this is r "<<rotation<<endl;
+  cout<<"this is t "<<t<<endl;
   tf::Transform refined_T_2_1;
   refined_T_2_1.setOrigin(tf::Vector3(t.at<float>(0,0),t.at<float>(0,1),0.0));
   refined_T_2_1.setRotation(tf::createQuaternionFromYaw(rotation));

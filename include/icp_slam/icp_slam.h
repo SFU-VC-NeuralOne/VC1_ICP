@@ -81,7 +81,7 @@ public:
    * @param dists square of distances of the correspondences
    * @todo to be replaced by k-d tree based methods
    */
-  static cv::Mat closestPoints(cv::Mat &point_mat1,
+  static void closestPoints(cv::Mat &point_mat1,
                             cv::Mat &point_mat2,
                             std::vector<int> &closest_indices,
                             std::vector<float> &closest_distances_2);
@@ -96,6 +96,13 @@ public:
   static void vizClosestPoints(cv::Mat &point_mat1,
                                cv::Mat &point_mat2,
                                const tf::Transform &T_2_1);
+  
+  static void intersectionPoints(cv::Mat &point_mat1,
+                                    cv::Mat &point_mat2,
+                                    std::vector<int> &closest_indices,
+                                    std::vector<float> &closest_distances_2,
+                                    cv::Mat &intersection_point_mat1,
+                                     cv::Mat &intersection_point_mat2);
 
 
 
