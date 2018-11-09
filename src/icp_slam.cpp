@@ -159,7 +159,7 @@ void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
         // cout<<"found a absolute zero!!"<<endl;
         continue;
       }
-      else if(j == 0){
+      if(j == 0){
         point_mat1.row(i).copyTo(points1_out);
         point_mat2.row(closest_indices[i]).copyTo(points2_out);
         j = j+1;
@@ -314,7 +314,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
   tf::Transform refined_T_2_1;
   vizClosestPoints(points1, points2, T_2_1);
-  
+  cout<<"Original Transform T: "<<T_2_1.getOrigin()<<" Rotation: "<<tf::getYaw(T_2_1.getRotation()) * 180/M_PI <<endl;
   
   // cout<<"this is matrix point 2!!!!!!"<<points2<<endl;
 
@@ -339,6 +339,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
     double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
 
+    cout<<"Refined Transform T: "<<this_point<<" Rotation: "<<this_a <<endl;
     if(i > 0){
       double distance = cv::norm(this_point-previous_point);
       float rot = abs(previous_a-this_a);
@@ -349,7 +350,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     previous_point = this_point;
     // this_point.copyTo(previous_point);
     previous_a = this_a;
-    cout<<i<<endl;
+    cout<<i<<" iteration"<<endl;
   }
   
   return refined_T_2_1;
