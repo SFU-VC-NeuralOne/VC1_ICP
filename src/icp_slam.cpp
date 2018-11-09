@@ -57,6 +57,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     tf_map_odom.setOrigin(tf::Vector3(0, 0, 0));
     tf_map_odom.setRotation(tf::createQuaternionFromYaw(0.0));
     tf_map_laser = tf_map_odom;
+    last_kf_tf_map_laser_ = tf_map_odom;
     is_tracker_running_=false;
     is_first_frame_=false;
     return true;
@@ -69,15 +70,22 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<endl;
     cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getY()<<endl;
     tf::Transform refined_tf = icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation);
-    
-    tf_map_laser = tf::StampedTransform(,
+
+    tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*refined_tf,
                                         current_frame_tf_odom_laser.stamp_,
                                          "map",
                                          "odom");
 
-    
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
     *last_kf_laser_scan_ = *laser_scan;
+  }
+  else
+  {
+    tf::Transform tf_estimation = current_frame_tf_odom_laser.inverse() * last_kf_tf_odom_laser_ ;
+    tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*tf_estimation,
+                                        current_frame_tf_odom_laser.stamp_,
+                                         "map",
+                                         "odom");
   }
   is_tracker_running_ = false;
   return true;
@@ -112,7 +120,7 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   double angle = 0.0;
   if (angle_now >= angle_previous){
     angle = angle_now-angle_previous;
-    }else{map
+    }else{
       angle = angle_previous-angle_now;
       }
 
@@ -299,19 +307,22 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   cv::Mat ux;
   cv::reduce(point_mat1, ux, 0, CV_REDUCE_AVG);
   cv::Mat up;
-  cv::reduce(point_mat1, up, 0, CV_REDUCE_AVG);
+  cv::reduce(point_mat2, up, 0, CV_REDUCE_AVG);
   
   cv::Mat x_prime;
   subtract(point_mat1,(cv::Scalar)(ux.at<float>(0,0), ux.at<float>(0,0)),x_prime);
-
+  
   cv::Mat p_prime;
   subtract(point_mat2,(cv::Scalar)(up.at<float>(0,0), up.at<float>(0,0)),p_prime);
   
-  cv::SVD svd(x_prime * p_prime.t());
-
+  cv::SVD svd(x_prime.t()* p_prime);
+  cout<<"this is w "<<x_prime.t()* p_prime<<endl;
+  
   cv::Mat r = svd.u*svd.vt;
-  cv::Mat t = ux - r * up;
-
+  cout<<"this is r "<<r<<endl;
+  cv::Mat t = ux - up*r ;
+  cout<<"im here!!!!!!!!!!!!!"<<endl;
+  
   float rotation = atan2(r.at<float>(0,1), r.at<float>(0,0));
 
   tf::Transform refined_T_2_1;

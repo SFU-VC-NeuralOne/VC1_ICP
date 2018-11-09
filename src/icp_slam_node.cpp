@@ -119,8 +119,8 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
   tf::StampedTransform tf_odom_laser;
   cout<<"the time: "<<last_map_update<< endl;
   tf_listener_.lookupTransform(odom_frame_id_, laser_msg->header.frame_id, ros::Time(0),tf_odom_laser);
-  //tf_odom_laser.stamp_ = ros::Time::now();
-
+  
+  
   // current pose
   tf::StampedTransform tf_map_laser;
   auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
@@ -134,19 +134,7 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
     0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
     0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
     0,0,0,0,0,100,100,100,100, 100
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
-    // 0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100
+
     };
   }
   publishMap(laser_msg->header.stamp);
@@ -154,12 +142,13 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
   {
     publishMap(laser_msg->header.stamp);
   }
+  tf_broadcaster_.sendTransform(tf_map_laser);
+
   }
   catch (tf::TransformException &ex) {
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
- }
-  
+  }
 
   // TODO: broadcast odom to map transform (using tf)
 }
