@@ -80,7 +80,7 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   double max_keyframes_distance;
   double max_keyframes_angle;
   double max_keyframes_time;
-  local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.02);
+  local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.5);
   local_nh_.param<double>("max_keyframes_angle", max_keyframes_angle, 0.01);
   local_nh_.param<double>("max_keyframes_time", max_keyframes_time, 0.5);
 

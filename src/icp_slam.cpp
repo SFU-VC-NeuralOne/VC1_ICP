@@ -68,9 +68,9 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     cout<<"key frame created!!"<<endl;
 
     tf::Transform tf_estimation = last_kf_tf_odom_laser_.inverse() * current_frame_tf_odom_laser;
-    cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<endl;
-    cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<endl;
-    cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getY()<<endl;
+    cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<" "<<tf::getYaw(last_kf_tf_odom_laser_.getRotation()) * 180 / M_PI<<endl;
+    cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<" "<<tf::getYaw(current_frame_tf_odom_laser.getRotation()) * 180 / M_PI<<endl;
+    cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getY()<<" "<<tf::getYaw(current_frame_tf_odom_laser*tf_estimation.inverse().getRotation()) * 180 / M_PI<<endl;
     tf::Transform refined_tf = icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation);
 
     tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*refined_tf,
@@ -129,7 +129,7 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
       angle = angle_previous-angle_now;
       }
 
-  if(angle>=max_keyframes_angle_){
+  if(abs(angle)>=max_keyframes_angle_){
     return true;
     }
   // if((double)(current_frame_tf.stamp_.toSec() - last_kf_tf.stamp_.toSec()) >= max_keyframes_time_){
@@ -320,7 +320,6 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   
   // cout<<"this is matrix point 2!!!!!!"<<points2<<endl;
 
-  
   cv::Point2d previous_point;
   double previous_a;
   double dis_threshold = 0.00001;
@@ -336,7 +335,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 
     intersectionPoints(points1, points2, closest_indices, closest_distances_2, points1_out, points2_out);
     refined_T_2_1 = icpIteration(points1_out, points2_out);
-    cv::Mat points2_new = utils::transformPointMat(refined_T_2_1, points2_new);
+    points2_new = utils::transformPointMat(refined_T_2_1, points2);
     vizClosestPoints(points1, points2, refined_T_2_1, i);
     cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
     double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
@@ -381,15 +380,20 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   cv::reduce(point_mat1, ux, 0, CV_REDUCE_AVG);
   cv::Mat up;
   cv::reduce(point_mat2, up, 0, CV_REDUCE_AVG);
-  
+
+  //cout<<"this is ux "<<ux<<endl;
+  //cout<<"this is up "<<up<<endl;
+
+  //cout<<"this is point_mat1 "<<point_mat1<<endl;
+  //cout<<"this is point_mat2 "<<point_mat2<<endl;
+
   cv::Mat x_prime;
-  subtract(point_mat1,(cv::Scalar)(ux.at<float>(0,0), ux.at<float>(0,0)),x_prime);
+  subtract(point_mat1,(cv::Scalar)(ux.at<float>(0,0), ux.at<float>(0,1)),x_prime);
   
   cv::Mat p_prime;
-  subtract(point_mat2,(cv::Scalar)(up.at<float>(0,0), up.at<float>(0,0)),p_prime);
-  
-  // cout<<"this is xprime "<<x_prime<<endl;
-  // cout<<"this is point_mat2 "<<point_mat2<<endl;
+  subtract(point_mat2,(cv::Scalar)(up.at<float>(0,0), up.at<float>(0,1)),p_prime);
+  //cout<<"this is x_prime "<<x_prime<<endl;
+  //cout<<"this is p_prime "<<p_prime<<endl;
   cv::SVD svd(x_prime.t()* p_prime);
   
   
@@ -399,7 +403,7 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   //cout<<"this is r "<<r<<endl;
   // cout<<"im here!!!!!!!!!!!!!"<<endl;
   
-  float rotation = atan2(r.at<float>(0,1), r.at<float>(0,0));
+  float rotation = atan2(r.at<float>(1,0), r.at<float>(0,0));
   //cout<<"this is r "<<rotation<<endl;
   //cout<<"this is t "<<t<<endl;
   tf::Transform refined_T_2_1;
