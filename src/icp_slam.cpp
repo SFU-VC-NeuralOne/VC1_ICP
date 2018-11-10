@@ -51,8 +51,8 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     *last_kf_laser_scan_ = *laser_scan;
     last_kf_tf_odom_laser_=current_frame_tf_odom_laser;
     tf::StampedTransform tf_map_odom;
-    tf_map_odom.frame_id_ = "map";
-    tf_map_odom.child_frame_id_ = "odom";
+    tf_map_odom.frame_id_ = laser_scan->header.frame_id;
+    tf_map_odom.child_frame_id_ = "map";
     tf_map_odom.stamp_ = ros::Time::now();
     tf_map_odom.setOrigin(tf::Vector3(0, 0, 0));
     tf_map_odom.setRotation(tf::createQuaternionFromYaw(0.0));
@@ -65,27 +65,27 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   if(isCreateKeyframe(current_frame_tf_odom_laser, last_kf_tf_odom_laser_)){
     cout<<"key frame created!!"<<endl;
 
-    tf::Transform tf_estimation = current_frame_tf_odom_laser.inverse() * last_kf_tf_odom_laser_ ;
+    tf::Transform tf_estimation = last_kf_tf_odom_laser_.inverse() * current_frame_tf_odom_laser;
     cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<endl;
     cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<endl;
-    cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getY()<<endl;
+    cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation).getOrigin().getY()<<endl;
     tf::Transform refined_tf = icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation);
 
     tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*refined_tf,
                                         current_frame_tf_odom_laser.stamp_,
-                                         "map",
-                                         "odom");
+                                         laser_scan->header.frame_id,
+                                         "map");
 
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
     *last_kf_laser_scan_ = *laser_scan;
   }
   else
   {
-    tf::Transform tf_estimation = current_frame_tf_odom_laser.inverse() * last_kf_tf_odom_laser_ ;
+    tf::Transform tf_estimation = last_kf_tf_odom_laser_.inverse() * current_frame_tf_odom_laser ;
     tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*tf_estimation,
                                         current_frame_tf_odom_laser.stamp_,
-                                         "map",
-                                         "odom");
+                                         laser_scan->header.frame_id,
+                                         "map");
   }
   is_tracker_running_ = false;
   return true;
@@ -137,8 +137,8 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
 void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
                                     cv::Mat &point_mat2,
                                     std::vector<int> &closest_indices,
-                                    std::vector<float> &closest_distances_2,
-                                    cv::Mat &points1_out,
+                                   std::vector<float> &closest_distances_2,
+                                   cv::Mat &points1_out,
                                     cv::Mat &points2_out)
 {
 
@@ -178,8 +178,6 @@ void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
   }
 
 }
-
-
 
 void ICPSlam::closestPoints(cv::Mat &point_mat1,
                             cv::Mat &point_mat2,
@@ -313,8 +311,8 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
   tf::Transform refined_T_2_1;
-  vizClosestPoints(points1, points2, T_2_1);
-  cout<<"Original Transform T: "<<T_2_1.getOrigin()<<" Rotation: "<<tf::getYaw(T_2_1.getRotation()) * 180/M_PI <<endl;
+  
+  cout<<"Original Transform T: "<<T_2_1.getOrigin().getX()<<" "<<T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(T_2_1.getRotation()) * 180/M_PI <<endl;
   
   // cout<<"this is matrix point 2!!!!!!"<<points2<<endl;
 

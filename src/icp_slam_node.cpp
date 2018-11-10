@@ -143,6 +143,11 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
     publishMap(laser_msg->header.stamp);
   }
   tf_broadcaster_.sendTransform(tf_map_laser);
+  cout<<"baselink to map transform "<<tf_map_laser.getOrigin().getX()<<" "<<tf_map_laser.getOrigin().getY()<<endl;
+
+  tf::StampedTransform tf_odm_map(tf_odom_laser*tf_map_laser.inverse(), tf_odom_laser.stamp_, "map", "odom");
+  cout<<"map to odm transform "<<tf_odm_map.getOrigin().getX()<<" "<<tf_odm_map.getOrigin().getY()<<endl;
+  tf_broadcaster_.sendTransform(tf_odm_map );
 
   }
   catch (tf::TransformException &ex) {
