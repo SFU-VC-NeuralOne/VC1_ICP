@@ -51,8 +51,8 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     *last_kf_laser_scan_ = *laser_scan;
     last_kf_tf_odom_laser_=current_frame_tf_odom_laser;
     tf::StampedTransform tf_map_odom;
-    tf_map_odom.frame_id_ = laser_scan->header.frame_id;
-    tf_map_odom.child_frame_id_ = "map";
+    tf_map_odom.frame_id_ = "map";
+    tf_map_odom.child_frame_id_ = laser_scan->header.frame_id;
     tf_map_odom.stamp_ = ros::Time::now();
     tf_map_odom.setOrigin(tf::Vector3(0, 0, 0));
     tf_map_odom.setRotation(tf::createQuaternionFromYaw(0.0));
@@ -73,19 +73,22 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
 
     tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*refined_tf,
                                         current_frame_tf_odom_laser.stamp_,
-                                         laser_scan->header.frame_id,
-                                         "map");
+                                         "map",
+                                         laser_scan->header.frame_id);
 
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
+    last_kf_tf_map_laser_ = tf_map_laser;
     *last_kf_laser_scan_ = *laser_scan;
+    is_tracker_running_ = false;
+    return true;
   }
   else
   {
     tf::Transform tf_estimation = last_kf_tf_odom_laser_.inverse() * current_frame_tf_odom_laser ;
     tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*tf_estimation,
                                         current_frame_tf_odom_laser.stamp_,
-                                         laser_scan->header.frame_id,
-                                         "map");
+                                        "map",
+                                         laser_scan->header.frame_id);
   }
   is_tracker_running_ = false;
   return true;
@@ -140,9 +143,7 @@ void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
                                    std::vector<float> &closest_distances_2,
                                    cv::Mat &points1_out,
                                     cv::Mat &points2_out)
-{
-
-  float mean;
+{float mean;
   float std_dev;
   utils::meanAndStdDev(closest_distances_2, mean, std_dev);
 
