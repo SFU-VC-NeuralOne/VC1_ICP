@@ -50,14 +50,16 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   if(is_first_frame_){ //initialzation
     *last_kf_laser_scan_ = *laser_scan;
     last_kf_tf_odom_laser_=current_frame_tf_odom_laser;
-    tf::StampedTransform tf_map_odom;
-    tf_map_odom.frame_id_ = "map";
-    tf_map_odom.child_frame_id_ = laser_scan->header.frame_id;
-    tf_map_odom.stamp_ = ros::Time::now();
-    tf_map_odom.setOrigin(tf::Vector3(0, 0, 0));
-    tf_map_odom.setRotation(tf::createQuaternionFromYaw(0.0));
-    tf_map_laser = tf_map_odom;
-    last_kf_tf_map_laser_ = tf_map_odom;
+    //tf::StampedTransform tf_map_odom;
+    // tf_map_odom.frame_id_ = "map";
+    // tf_map_odom.child_frame_id_ = laser_scan->header.frame_id;
+    // tf_map_odom.stamp_ = ros::Time::now();
+    // tf_map_odom.setOrigin(tf::Vector3(0, 0, 0));
+    // tf_map_odom.setRotation(tf::createQuaternionFromYaw(0.0));
+    tf_map_laser = current_frame_tf_odom_laser;
+    tf_map_laser.frame_id_ = "map";
+    tf_map_laser.child_frame_id_ = laser_scan->header.frame_id;
+    last_kf_tf_map_laser_ = tf_map_laser;
     is_tracker_running_=false;
     is_first_frame_=false;
     return true;
@@ -242,7 +244,7 @@ void ICPSlam::closestPoints(cv::Mat &point_mat1,
 
 void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
                                cv::Mat &point_mat2,
-                               const tf::Transform &T_2_1)
+                               const tf::Transform &T_2_1, int num)
 {
   assert(point_mat1.size == point_mat2.size);
 
@@ -300,7 +302,8 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
 
   cv::Mat tmp;
   cv::flip(img, tmp, 0);
-  cv::imwrite("/tmp/icp_laser.png", img);
+  string name = "/tmp/icp_laser" + to_string(num) +".png";
+  cv::imwrite(name, img);
 }
 
 tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan1,
@@ -322,7 +325,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   double previous_a;
   double dis_threshold = 0.00001;
   double angle_threshold = 0.00001;
-
+  vizClosestPoints(points1, points2, T_2_1, 100);
   for(int i =0; i<30; i++){
     std::vector<int> closest_indices;
     std::vector<float> closest_distances_2;
@@ -333,19 +336,19 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 
     intersectionPoints(points1, points2, closest_indices, closest_distances_2, points1_out, points2_out);
     refined_T_2_1 = icpIteration(points1_out, points2_out);
-    cv::Mat points2_new = utils::transformPointMat(refined_T_2_1, points2);
-
+    cv::Mat points2_new = utils::transformPointMat(refined_T_2_1, points2_new);
+    vizClosestPoints(points1, points2, refined_T_2_1, i);
     cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
     double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
 
     cout<<"Refined Transform T: "<<this_point<<" Rotation: "<<this_a <<endl;
-    if(i > 0){
-      double distance = cv::norm(this_point-previous_point);
-      float rot = abs(previous_a-this_a);
-      if((distance <= dis_threshold) && (rot <= angle_threshold)){
-        return refined_T_2_1;
-      }
-    }
+    // if(i > 0){
+    //   double distance = cv::norm(this_point-previous_point);
+    //   float rot = abs(previous_a-this_a);
+    //   if((distance <= dis_threshold) && (rot <= angle_threshold)){
+    //     return refined_T_2_1;
+    //   }
+    // }
     previous_point = this_point;
     // this_point.copyTo(previous_point);
     previous_a = this_a;
@@ -391,13 +394,14 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   
   
   cv::Mat r = svd.u*svd.vt;
-  // cout<<"this is r "<<r<<endl;
+  //cout<<"this is r "<<r<<endl;
   cv::Mat t = ux - up*r ;
+  //cout<<"this is r "<<r<<endl;
   // cout<<"im here!!!!!!!!!!!!!"<<endl;
   
   float rotation = atan2(r.at<float>(0,1), r.at<float>(0,0));
-  cout<<"this is r "<<rotation<<endl;
-  cout<<"this is t "<<t<<endl;
+  //cout<<"this is r "<<rotation<<endl;
+  //cout<<"this is t "<<t<<endl;
   tf::Transform refined_T_2_1;
   refined_T_2_1.setOrigin(tf::Vector3(t.at<float>(0,0),t.at<float>(0,1),0.0));
   refined_T_2_1.setRotation(tf::createQuaternionFromYaw(rotation));
