@@ -335,9 +335,9 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     std::vector<int> closest_indices;
     std::vector<float> closest_distances_2;
     closestPoints(points1, points2_new, closest_indices, closest_distances_2);
-    // cout<<"+++++++++++++++indices: "<<endl;
-    // for (auto i = closest_indices.begin(); i != closest_indices.end(); ++i)
-    // std::cout << *i << ' ';
+    cout<<"+++++++++++++++indices: "<<endl;
+    for (auto i = closest_indices.begin(); i != closest_indices.end(); ++i)
+    std::cout << *i << ' ';
 
     cv::Mat points1_out;
     cv::Mat points2_out;
@@ -351,11 +351,12 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     int ind = closest_indices[i];
     points2_reordered.push_back(points2.row(ind));
     }
+    cout<<"points2_reordered "<<points2_reordered<<endl;
     
     refined_T_2_1 = icpIteration(points1, points2_reordered);
 
     
-    points2_new = utils::transformPointMat(refined_T_2_1, points2);
+    points2_new = utils::transformPointMat(refined_T_2_1, points2_reordered);
     cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
     cout<<"Error: "<<error<<endl;
 
