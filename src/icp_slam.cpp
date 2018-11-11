@@ -122,12 +122,12 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
 
   double angle_now = tf::getYaw((current_frame_tf.getRotation()) * 180 / M_PI);
   double angle_previous = tf::getYaw((last_kf_tf.getRotation()) * 180 / M_PI);  
-  double angle = 0.0;
-  if (angle_now >= angle_previous){
-    angle = angle_now-angle_previous;
-    }else{
-      angle = angle_previous-angle_now;
-      }
+  double angle = angle_now-angle_previous;
+  // if (angle_now >= angle_previous){
+  //   angle = angle_now-angle_previous;
+  //   }else{
+  //     angle = angle_previous-angle_now;
+  //     }
 
   if(abs(angle)>=max_keyframes_angle_){
     return true;
@@ -154,7 +154,9 @@ void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
 
   cv::Mat mat_indices(point_mat1.rows, 1, CV_32S);
 
-  int j = 0;
+  int j = 0;cout<<"+++++++++++++++indices: "<<endl;
+    // for (auto i = closest_indices.begin(); i != closest_indices.end(); ++i)
+    // std::cout << *i << ' ';
   for (int i=0;i<mat_indices.rows;++i) {
     if(closest_distances_2[i] <= mean+2*(std_dev) || closest_distances_2[i] >= mean-2*(std_dev)){
       if((point_mat1.at<float>(i,0) == 0.0) || (point_mat2.at<float>(i,0) == 0.0))
@@ -276,7 +278,6 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
     pix = std::min(size_pix - 1, pix);
     return pix;
   };
-
   cv::Mat transformed_point_mat2 = utils::transformPointMat(T_2_1.inverse(), point_mat2);
 
   for (size_t i = 0, len_i = (size_t)point_mat1.rows; i < len_i; i++)
@@ -314,10 +315,15 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
   cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
+  
   tf::Transform refined_T_2_1;
   
   cout<<"Original Transform T: "<<T_2_1.getOrigin().getX()<<" "<<T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(T_2_1.getRotation()) * 180/M_PI <<endl;
   
+
+  cv::Mat error;
+  cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
+  cout<<"Original Error: "<<error<<endl;
   // cout<<"this is matrix point 2!!!!!!"<<points2<<endl;
 
   cv::Point2d previous_point;
@@ -325,17 +331,34 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   double dis_threshold = 0.00001;
   double angle_threshold = 0.00001;
   vizClosestPoints(points1, points2, T_2_1, 100);
-  for(int i =0; i<30; i++){
+  for(int i =0; i<10; i++){
     std::vector<int> closest_indices;
     std::vector<float> closest_distances_2;
     closestPoints(points1, points2_new, closest_indices, closest_distances_2);
+    // cout<<"+++++++++++++++indices: "<<endl;
+    // for (auto i = closest_indices.begin(); i != closest_indices.end(); ++i)
+    // std::cout << *i << ' ';
 
     cv::Mat points1_out;
     cv::Mat points2_out;
 
-    intersectionPoints(points1, points2, closest_indices, closest_distances_2, points1_out, points2_out);
-    refined_T_2_1 = icpIteration(points1_out, points2_out);
+    //intersectionPoints(points1, points2, closest_indices, closest_distances_2, points1_out, points2_out);
+    
+    //testing without rejection
+    cv::Mat points2_reordered;
+    for(int i = 0; i < closest_indices.size(); i++)
+    {
+    int ind = closest_indices[i];
+    points2_reordered.push_back(points2.row(ind));
+    }
+    
+    refined_T_2_1 = icpIteration(points1, points2_reordered);
+
+    
     points2_new = utils::transformPointMat(refined_T_2_1, points2);
+    cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
+    cout<<"Error: "<<error<<endl;
+
     vizClosestPoints(points1, points2, refined_T_2_1, i);
     cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
     double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
