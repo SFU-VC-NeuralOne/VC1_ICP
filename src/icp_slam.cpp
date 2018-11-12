@@ -62,7 +62,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     last_kf_tf_map_laser_ = tf_map_laser;
     is_tracker_running_=false;
     is_first_frame_=false;
-    return true;
+       return true;
   }
   if(isCreateKeyframe(current_frame_tf_odom_laser, last_kf_tf_odom_laser_)){
     cout<<"key frame created!!"<<endl;
@@ -294,6 +294,7 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
 
     cv::Point point1(pix_x1, pix_y1);
     cv::Point point2(pix_x2, pix_y2);
+    //cout<<"points2!!!!!! "<<point2<<endl;
 
     cv::circle(img, point1, 5, cv::Scalar(0, 0, 255), -1);
     cv::circle(img, point2, 5, cv::Scalar(255, 0, 0), -1);
@@ -309,18 +310,40 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
 
 tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan1,
                                     const sensor_msgs::LaserScanConstPtr &laser_scan2,
-                                    const tf::Transform &T_2_1)
+                                    const tf::Transform &T_2_1aaaaaaaaa)
 {
   //2*T21
-  cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
-  cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
+  // cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
+  // cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
+
+   //======test
+  cv::Mat points1(3, 2, CV_32F);
+  cv::Mat points2(3, 2, CV_32F);
+  points1.at<float>(0,0)=1.0;
+  points1.at<float>(0,1)=1.0;
+  points1.at<float>(1,0)=2.0;
+  points1.at<float>(1,1)=1.0;
+  points1.at<float>(2,0)=4.0;
+  points1.at<float>(2,1)=4.0;
+
+  points2.at<float>(0,0)=0;
+  points2.at<float>(0,1)=1;
+  points2.at<float>(1,0)=0;
+  points2.at<float>(1,1)=2;
+  points2.at<float>(2,0)=-3;
+  points2.at<float>(2,1)=4;
+  cout<<"test data points 1 "<<points1<<endl;
+  cout<<"test data points 2 "<<points2<<endl;
+  tf::Transform T_2_1;
+  T_2_1.setOrigin(tf::Vector3(0, 1, 0));
+  T_2_1.setRotation(tf::createQuaternionFromYaw(-1.6));
+   //===========end test
+
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
-  
-  tf::Transform refined_T_2_1;
-  
+  cout<<"after est transform points 2 "<<points2_new<<endl;
+  tf::Transform refined_T_2_1; 
   cout<<"Original Transform T: "<<T_2_1.getOrigin().getX()<<" "<<T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(T_2_1.getRotation()) * 180/M_PI <<endl;
   
-
   cv::Mat error;
   cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
   cout<<"Original Error: "<<error<<endl;
@@ -330,8 +353,9 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   double previous_a;
   double dis_threshold = 0.00001;
   double angle_threshold = 0.00001;
-  vizClosestPoints(points1, points2, T_2_1, 100);
+  vizClosestPoints(points2,points1, T_2_1, 100);
   for(int i =0; i<10; i++){
+    cout<<i<<" iteration"<<endl;
     std::vector<int> closest_indices;
     std::vector<float> closest_distances_2;
     closestPoints(points1, points2_new, closest_indices, closest_distances_2);
@@ -351,16 +375,15 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     int ind = closest_indices[i];
     points2_reordered.push_back(points2.row(ind));
     }
-    cout<<"points2_reordered "<<points2_reordered<<endl;
+    // cout<<"points2_reordered "<<points2_reordered<<endl;
     
     refined_T_2_1 = icpIteration(points1, points2_reordered);
 
-    
-    points2_new = utils::transformPointMat(refined_T_2_1, points2_reordered);
+    points2_new = utils::transformPointMat(refined_T_2_1, points2);
     cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
     cout<<"Error: "<<error<<endl;
 
-    vizClosestPoints(points1, points2, refined_T_2_1, i);
+    vizClosestPoints(points2, points1, refined_T_2_1, i);
     cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
     double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
 
@@ -375,7 +398,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     previous_point = this_point;
     // this_point.copyTo(previous_point);
     previous_a = this_a;
-    cout<<i<<" iteration"<<endl;
+    
   }
   
   return refined_T_2_1;
@@ -404,27 +427,37 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   cv::reduce(point_mat1, ux, 0, CV_REDUCE_AVG);
   cv::Mat up;
   cv::reduce(point_mat2, up, 0, CV_REDUCE_AVG);
+  cout<<"this is ux "<<ux<<endl;
+  cout<<"this is up "<<up<<endl;
 
-  //cout<<"this is ux "<<ux<<endl;
-  //cout<<"this is up "<<up<<endl;
-
-  //cout<<"this is point_mat1 "<<point_mat1<<endl;
-  //cout<<"this is point_mat2 "<<point_mat2<<endl;
+  cout<<"this is point_mat1 \n"<<point_mat1<<endl;
+  cout<<"this is point_mat2 \n"<<point_mat2<<endl;
 
   cv::Mat x_prime;
-  subtract(point_mat1,(cv::Scalar)(ux.at<float>(0,0), ux.at<float>(0,1)),x_prime);
+  for(int i=0; i<point_mat1.rows; i++){
+    cv::Mat temp(1,2, CV_32F);
+    temp.at<float>(0,0) = point_mat1.at<float>(i,0)-ux.at<float>(0,0);
+    temp.at<float>(0,1) = point_mat1.at<float>(i,1)-ux.at<float>(0,1);
+    x_prime.push_back(temp);
+  }
   
   cv::Mat p_prime;
-  subtract(point_mat2,(cv::Scalar)(up.at<float>(0,0), up.at<float>(0,1)),p_prime);
-  //cout<<"this is x_prime "<<x_prime<<endl;
-  //cout<<"this is p_prime "<<p_prime<<endl;
+  for(int i=0; i<point_mat2.rows; i++){
+    cv::Mat temp(1,2, CV_32F);
+    temp.at<float>(0,0) = point_mat2.at<float>(i,0)-ux.at<float>(0,0);
+    temp.at<float>(0,1) = point_mat2.at<float>(i,1)-ux.at<float>(0,1);
+    p_prime.push_back(temp);
+  }
+  cout<<"this is x_prime "<<x_prime<<endl;
+  cout<<"this is p_prime "<<p_prime<<endl;
+  // auto w = x_prime.t()* p_prime;
   cv::SVD svd(x_prime.t()* p_prime);
-  
+  cout<<"this is w "<<x_prime.t()* p_prime<<endl;
   
   cv::Mat r = svd.u*svd.vt;
-  //cout<<"this is r "<<r<<endl;
+  cout<<"this is r "<<r<<endl;
   cv::Mat t = ux - up*r ;
-  //cout<<"this is r "<<r<<endl;
+  cout<<"this is t "<<t<<endl;
   // cout<<"im here!!!!!!!!!!!!!"<<endl;
   
   float rotation = atan2(r.at<float>(1,0), r.at<float>(0,0));
