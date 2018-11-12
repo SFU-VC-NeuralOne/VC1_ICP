@@ -340,7 +340,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   // //  //===========end test
 
   cv::Mat points2_new = utils::transformPointMat(T_2_1, points2);
-  cout<<"after est transform points 2 "<<points2_new<<endl;
+  //cout<<"after est transform points 2 "<<points2_new<<endl;
   tf::Transform refined_T_2_1; 
   cout<<"Original Transform T: "<<T_2_1.getOrigin().getX()<<" "<<T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(T_2_1.getRotation()) * 180/M_PI <<endl;
   
