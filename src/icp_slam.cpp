@@ -444,8 +444,8 @@ tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
   cv::Mat p_prime;
   for(int i=0; i<point_mat2.rows; i++){
     cv::Mat temp(1,2, CV_32F);
-    temp.at<float>(0,0) = point_mat2.at<float>(i,0)-ux.at<float>(0,0);
-    temp.at<float>(0,1) = point_mat2.at<float>(i,1)-ux.at<float>(0,1);
+    temp.at<float>(0,0) = point_mat2.at<float>(i,0)-up.at<float>(0,0);
+    temp.at<float>(0,1) = point_mat2.at<float>(i,1)-up.at<float>(0,1);
     p_prime.push_back(temp);
   }
   cout<<"this is x_prime "<<x_prime<<endl;
