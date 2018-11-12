@@ -95,7 +95,14 @@ public:
    */
   static void vizClosestPoints(cv::Mat &point_mat1,
                                cv::Mat &point_mat2,
-                               const tf::Transform &T_2_1);
+                               const tf::Transform &T_2_1,int i);
+  
+  static void intersectionPoints(cv::Mat &point_mat1,
+                                    cv::Mat &point_mat2,
+                                    std::vector<int> &closest_indices,
+                                    std::vector<float> &closest_distances_2,
+                                    cv::Mat &intersection_point_mat1,
+                                     cv::Mat &intersection_point_mat2);
 
 
 
@@ -103,6 +110,7 @@ protected:
   sensor_msgs::LaserScanPtr last_kf_laser_scan_;     ///< laser scan of last kf
   tf::StampedTransform last_kf_tf_odom_laser_;    ///< Transform in odom frame of last keyframe
   tf::StampedTransform last_kf_tf_map_laser_;     ///< Transform in map frame of last keyframe
+  bool is_first_frame_;
 
 
   tfScalar max_keyframes_distance_;
