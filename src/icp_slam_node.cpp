@@ -80,7 +80,7 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   double max_keyframes_distance;
   double max_keyframes_angle;
   double max_keyframes_time;
-  local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.5);
+  local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.02);
   local_nh_.param<double>("max_keyframes_angle", max_keyframes_angle, 0.01);
   local_nh_.param<double>("max_keyframes_time", max_keyframes_time, 0.5);
 
@@ -135,11 +135,11 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
     0,0,0,0,100,100,100,100, 100, 100, 100 ,100 ,100 ,100 ,100,
     0,0,0,0,0,100,100,100,100, 100};
       // tf_broadcaster_.sendTransform(tf_map_laser);
-      cout<<"baselink to map transform "<<tf_map_laser.getOrigin().getX()<<" "<<tf_map_laser.getOrigin().getY()<<" "<<tf::getYaw(tf_map_laser.getRotation()) * 180 / M_PI<<endl;
+      //cout<<"baselink to map transform "<<tf_map_laser.getOrigin().getX()<<" "<<tf_map_laser.getOrigin().getY()<<" "<<tf::getYaw(tf_map_laser.getRotation()) * 180 / M_PI<<endl;
 
       tf::StampedTransform tf_odm_map(tf_map_laser * tf_odom_laser.inverse(), tf_odom_laser.stamp_, "map", "odom");
-      cout<<"laser to odom transform "<<tf_odom_laser.getOrigin().getX()<<" "<<tf_odom_laser.getOrigin().getY()<<" "<<tf::getYaw(tf_odom_laser.getRotation()) * 180 / M_PI<<endl;
-      cout<<"map to odm transform "<<tf_odm_map.getOrigin().getX()<<" "<<tf_odm_map.getOrigin().getY()<<" "<<tf::getYaw(tf_odm_map.getRotation()) * 180 / M_PI<<endl;
+      //cout<<"laser to odom transform "<<tf_odom_laser.getOrigin().getX()<<" "<<tf_odom_laser.getOrigin().getY()<<" "<<tf::getYaw(tf_odom_laser.getRotation()) * 180 / M_PI<<endl;
+      //cout<<"map to odm transform "<<tf_odm_map.getOrigin().getX()<<" "<<tf_odm_map.getOrigin().getY()<<" "<<tf::getYaw(tf_odm_map.getRotation()) * 180 / M_PI<<endl;
       tf_broadcaster_.sendTransform(tf_odm_map );
     
   }
