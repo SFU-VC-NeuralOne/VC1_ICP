@@ -8,10 +8,11 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <ros/console.h>
+#include <iostream>
 
 #include <icp_slam/icp_slam.h>
 #include <icp_slam/mapper.h>
-
+using namespace std;
 using namespace icp_slam;
 
 /**
@@ -169,11 +170,11 @@ void ICPSlamNode::publishMap(ros::Time timestamp)
   occupancy_grid_.header.stamp = timestamp;
   // TODO: use map frame
   occupancy_grid_.header.frame_id = map_frame_id_;
-
   memcpy(occupancy_grid_.data.data(), map.data, map.total()*sizeof(int8_t));
   map_publisher_.publish(occupancy_grid_);
+  cout<<"i'm here!!!!!!!!!"<<endl;
 
-  cv::imwrite("/tmp/map.png", map);
+  //cv::imwrite("/tmp/map.png", map);
 }
 
 int main(int argc, char **argv)

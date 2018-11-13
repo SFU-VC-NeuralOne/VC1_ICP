@@ -21,7 +21,7 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/tf.h>
-
+#include <icp_slam/utils.h>
 #include <omp.h>
 #include <atomic>
 
@@ -107,6 +107,8 @@ protected:
 
   double origin_x_; ///< origin of the map in meters
   double origin_y_; ///< origin of the map in meters
+  int free_threshold_ = 10;
+  bool is_running = false;
 
   robot_pose_t robot_pose_;
 

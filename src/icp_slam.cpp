@@ -400,21 +400,23 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
                                     cv::Mat &point_mat2) 
 {
-  cout<<"test starts=======================";
-  cv::Mat map_(5,5,int);
-  for(int i=0; i<5; i++)
-  {
-    for(int j=0; j<5; j++)
-            map_.at<int>(i,j)=0;
-  }
-  cv::LineIterator it(map_,
-                    cv::Point(robot_grid_x, robot_grid_y),
-                    cv::Point(scan_grid_x, scan_grid_y),
-  );
-  for(int j = 0; j < it.count; j++, ++it) {
-      cv::Point point = it.pos(); // (point.x, point.y)
-  }
-  cout<<"===========test end=======================";
+  // cout<<"test starts======================="<<endl;
+  // cv::Mat map_(5,5,CV_16S);
+  // for(int i=0; i<5; i++)
+  // {
+  //   for(int j=0; j<5; j++)
+  //           map_.at<int>(i,j)=0;
+  // }
+  // cv::LineIterator it(map_,
+  //                   cv::Point(1, 1),
+  //                   cv::Point(4, 2)
+  // );
+  // for(int j = 0; j < it.count; j++, ++it) {
+  //     cv::Point point = it.pos(); // (point.x, point.y)
+  //     cout<<it.count<<endl;
+  //     cout<<point.x<<"hahahahaha"<<point.y<<endl;
+  // }
+  // cout<<"===========test end======================="<<endl;
 
   
   cv::Mat ux;
