@@ -134,11 +134,9 @@ cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &scan);
  * @return Nx2 CV matrix of transformed point cloud
  */
 cv::Mat transformPointMat(tf::Transform transform, cv::Mat &point_mat);
-cv::Mat re_order (cv::Mat &original_mat, std::vector<int> new_order );
 
 } // namespace utils
 
 } // namespace icp_slam
-
 
 #endif //ICP_SLAM_UTILS_H

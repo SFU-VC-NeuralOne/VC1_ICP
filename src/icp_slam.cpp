@@ -132,9 +132,9 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   if(abs(angle)>=max_keyframes_angle_){
     return true;
     }
-  // if((double)(current_frame_tf.stamp_.toSec() - last_kf_tf.stamp_.toSec()) >= max_keyframes_time_){
-  //   return true;
-  // }
+  if((double)(current_frame_tf.stamp_.toSec() - last_kf_tf.stamp_.toSec()) >= max_keyframes_time_){
+    return true;
+  }
 
   return false;
 } 
@@ -154,7 +154,7 @@ void ICPSlam::intersectionPoints(cv::Mat &point_mat1,
 
   cv::Mat mat_indices(point_mat1.rows, 1, CV_32S);
 
-  int j = 0;cout<<"+++++++++++++++indices: "<<endl;
+  int j = 0;
     // for (auto i = closest_indices.begin(); i != closest_indices.end(); ++i)
     // std::cout << *i << ' ';
   for (int i=0;i<mat_indices.rows;++i) {
@@ -315,6 +315,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   //2*T21
   cv::Mat points1 = utils::laserScanToPointMat(laser_scan1);
   cv::Mat points2 = utils::laserScanToPointMat(laser_scan2);
+  float error_threshold = 1e-7;
 
   // //  //======test
   // cv::Mat points1(3, 2, CV_32F);
@@ -346,15 +347,12 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
   
   cv::Mat error;
   cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
-  cout<<"Original Error: "<<error<<endl;
+  float last_error = error.at<float>(0,0) + error.at<float>(0,1);
+  cout<<"Original Error: "<<last_error<<endl;
   // cout<<"this is matrix point 2!!!!!!"<<points2<<endl;
 
-  cv::Point2d previous_point;
-  double previous_a;
-  double dis_threshold = 0.00001;
-  double angle_threshold = 0.00001;
   vizClosestPoints(points1, points2, T_2_1, 100);
-  for(int i =0; i<10; i++){
+  for(int i =0; i<20; i++){
     cout<<i<<" iteration"<<endl;
     std::vector<int> closest_indices;
     std::vector<float> closest_distances_2;
@@ -381,25 +379,19 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 
     points2_new = utils::transformPointMat(refined_T_2_1, points2);
     cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
-    cout<<"Error: "<<error<<endl;
+    float current_error = error.at<float>(0,0) + error.at<float>(0,1);
+    cout<<"Error: "<<current_error<<endl;
 
-    vizClosestPoints(points1, points2, refined_T_2_1, i);
-    cv::Point2d this_point(refined_T_2_1.getOrigin().getX(), refined_T_2_1.getOrigin().getY());
-    double this_a = tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI;
+    vizClosestPoints(points1_out, points2_out, refined_T_2_1, i);
 
-    cout<<"Refined Transform T: "<<this_point<<" Rotation: "<<this_a <<endl;
-    // if(i > 0){
-    //   double distance = cv::norm(this_point-previous_point);
-    //   float rot = abs(previous_a-this_a);
-    //   if((distance <= dis_threshold) && (rot <= angle_threshold)){
-    //     return refined_T_2_1;
-    //   }
-    // }
-    previous_point = this_point;
-    // this_point.copyTo(previous_point);
-    previous_a = this_a;
+    cout<<"Refined Transform T: "<<refined_T_2_1.getOrigin().getX()<<" "<<refined_T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI <<endl;
+    if(abs(last_error-current_error)<error_threshold){
+        return refined_T_2_1;
+      }
+    last_error = current_error;
+    }
     
-  }
+  
   
   return refined_T_2_1;
 
@@ -408,19 +400,23 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
                                     cv::Mat &point_mat2) 
 {
-  // cv::Mat test(5,2,CV_32F);
+  // cout<<"test starts======================="<<endl;
+  // cv::Mat map_(5,5,CV_16S);
   // for(int i=0; i<5; i++)
   // {
-  //   test.at<float>(i,0)=i+0.5;
-  //   test.at<float>(i,1)=i+1.5;
+  //   for(int j=0; j<5; j++)
+  //           map_.at<int>(i,j)=0;
   // }
-  // cv::Mat u1;
-  // cv::reduce(test, u1, 0, CV_REDUCE_AVG);
-  // cout<<"here is test !!!!!!!!!!!!!!!!!!!!!"<<test<<endl;
-  // cout<<"here is test mean!!!!!!!!!!!!!!!!!!!!!"<<u1<<endl;
-  // cv::Mat subs;
-  // subtract(test,(cv::Scalar)(u1.at<float>(0,0), u1.at<float>(0,0)),subs);
-  // cout<<"try substract"<<subs<<endl;
+  // cv::LineIterator it(map_,
+  //                   cv::Point(-1, -1),
+  //                   cv::Point(10, 10)
+  // );
+  // for(int j = 0; j < it.count; j++, ++it) {
+  //     cv::Point point = it.pos(); // (point.x, point.y)
+  //     cout<<it.count<<endl;
+  //     cout<<point.x<<"hahahahaha"<<point.y<<endl;
+  // }
+  // cout<<"===========test end======================="<<endl;
 
   
   cv::Mat ux;
