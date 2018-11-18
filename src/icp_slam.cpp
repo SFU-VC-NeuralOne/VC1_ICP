@@ -68,9 +68,9 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     cout<<"key frame created!!"<<endl;
 
     tf::Transform tf_estimation = last_kf_tf_odom_laser_.inverse() * current_frame_tf_odom_laser;
-    cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<" "<<tf::getYaw(last_kf_tf_odom_laser_.getRotation()) * 180 / M_PI<<endl;
-    cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<" "<<tf::getYaw(current_frame_tf_odom_laser.getRotation()) * 180 / M_PI<<endl;
-    cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getY()<<" "<<tf::getYaw(current_frame_tf_odom_laser*tf_estimation.inverse().getRotation()) * 180 / M_PI<<endl;
+    // cout<<"last x "<<last_kf_tf_odom_laser_.getOrigin().getX()<<"last y "<<last_kf_tf_odom_laser_.getOrigin().getY()<<" "<<tf::getYaw(last_kf_tf_odom_laser_.getRotation()) * 180 / M_PI<<endl;
+    // cout<<"current x "<<current_frame_tf_odom_laser.getOrigin().getX()<<"current y "<<current_frame_tf_odom_laser.getOrigin().getY()<<" "<<tf::getYaw(current_frame_tf_odom_laser.getRotation()) * 180 / M_PI<<endl;
+    // cout<<"after x"<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getX()<<"after y "<<(current_frame_tf_odom_laser*tf_estimation.inverse()).getOrigin().getY()<<" "<<tf::getYaw(current_frame_tf_odom_laser*tf_estimation.inverse().getRotation()) * 180 / M_PI<<endl;
     tf::Transform refined_tf = icpRegistration(last_kf_laser_scan_, laser_scan, tf_estimation);
 
     tf_map_laser = tf::StampedTransform(last_kf_tf_map_laser_*refined_tf,
