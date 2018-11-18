@@ -73,7 +73,7 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
      for(int i=0 ;i<laser_size; i++)
     {
         r = laser_scan->ranges[i];
-        a = laser_scan->angle_min + (laser_scan->angle_increment)*i - initial_angle;
+        a = laser_scan->angle_min + (laser_scan->angle_increment)*i + initial_angle;
         utils::polarToCartesian(r, a, scan_x, scan_y);
         scan_x = scan_x + robot_x;
         scan_y = scan_y + robot_y;
@@ -85,12 +85,22 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
                             cv::Point(scan_grid_x, scan_grid_y)
         );
         for(int j = 0; j < it.count; j++, ++it) {
-            if(j > (it.count -9))
+            if(j == (it.count -1))
             {
                 cv::Point point = it.pos(); 
-                if(relative_map_.at<int8_t>(point.x, point.y)>-126)
-                    relative_map_.at<int8_t>(point.x, point.y) = relative_map_.at<int8_t>(point.x, point.y) - 1;
-            }
+                // for (int a=point.x-1; a<point.x; a++)
+                // {
+                //     for (int b=point.y-1; b<point.y; b++)  
+                //     {
+                        //cout<<"a "<<a<<" b "<<b<<" bofre minus is"<<relative_map_.at<int8_t>(a, b)<<endl;
+                        if(relative_map_.at<int8_t>(point.x,point.y)>-126)
+                        { 
+                        relative_map_.at<int8_t>(point.x,point.y) = relative_map_.at<int8_t>(point.x,point.y)-1;
+                        }
+                        
+                    // }
+                    
+                }
             else{
                 cv::Point point = it.pos(); 
                 if(relative_map_.at<int8_t>(point.x, point.y)<126)
@@ -105,12 +115,12 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
     {
         for(int j=0; j<width_; j++)
         {
-            if(relative_map_.at<int8_t>(i,j) == 0)
-                map_.at<int8_t>(i,j) = NO_INFORMATION;
+            if(relative_map_.at<int8_t>(i,j) < -free_threshold_)
+                map_.at<int8_t>(i,j) =  LETHAL_OBSTACLE;
             else if(relative_map_.at<int8_t>(i,j) > free_threshold_)
                 map_.at<int8_t>(i,j) = FREE_SPACE;
             else
-                map_.at<int8_t>(i,j) = LETHAL_OBSTACLE;
+                map_.at<int8_t>(i,j) = NO_INFORMATION;
         }
     }
     is_running = false;
@@ -123,7 +133,7 @@ cv::Mat Mapper::getMapCopy()
     for(int i=height_-1; i>0; i--)
     {
         for(int j=0; j<width_; j++)
-            new_mat.at<int8_t>(height_-i,j)=map_.at<int8_t>(i,j);
+            new_mat.at<int8_t>(height_-i-1,j)=map_.at<int8_t>(j,i);
     }
 
     //nav_msgs::OccupancyGrid new_map;

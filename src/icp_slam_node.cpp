@@ -172,7 +172,6 @@ void ICPSlamNode::publishMap(ros::Time timestamp)
   occupancy_grid_.header.frame_id = map_frame_id_;
   memcpy(occupancy_grid_.data.data(), map.data, map.total()*sizeof(int8_t));
   map_publisher_.publish(occupancy_grid_);
-  cout<<"i'm here!!!!!!!!!"<<endl;
 
   //cv::imwrite("/tmp/map.png", map);
 }

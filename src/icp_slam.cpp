@@ -353,7 +353,7 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
 
   vizClosestPoints(points1, points2, T_2_1, 100);
   for(int i =0; i<20; i++){
-    cout<<i<<" iteration"<<endl;
+    //cout<<i<<" iteration"<<endl;
     std::vector<int> closest_indices;
     std::vector<float> closest_distances_2;
     closestPoints(points1, points2_new, closest_indices, closest_distances_2);
@@ -380,11 +380,11 @@ tf::Transform ICPSlam::icpRegistration(const sensor_msgs::LaserScanConstPtr &las
     points2_new = utils::transformPointMat(refined_T_2_1, points2);
     cv::reduce((points2_new-points1).mul(points2_new-points1), error, 0, CV_REDUCE_AVG);
     float current_error = error.at<float>(0,0) + error.at<float>(0,1);
-    cout<<"Error: "<<current_error<<endl;
+    //cout<<"Error: "<<current_error<<endl;
 
     vizClosestPoints(points1_out, points2_out, refined_T_2_1, i);
 
-    cout<<"Refined Transform T: "<<refined_T_2_1.getOrigin().getX()<<" "<<refined_T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI <<endl;
+    //cout<<"Refined Transform T: "<<refined_T_2_1.getOrigin().getX()<<" "<<refined_T_2_1.getOrigin().getY()<<" Rotation: "<<tf::getYaw(refined_T_2_1.getRotation()) * 180/M_PI <<endl;
     if(abs(last_error-current_error)<error_threshold){
         return refined_T_2_1;
       }
