@@ -85,26 +85,27 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
                             cv::Point(scan_grid_x, scan_grid_y)
         );
         for(int j = 0; j < it.count; j++, ++it) {
-            if(j == (it.count -1))
+            if(j== (it.count -1))
             {
                 cv::Point point = it.pos(); 
-                // for (int a=point.x-1; a<point.x; a++)
-                // {
-                //     for (int b=point.y-1; b<point.y; b++)  
-                //     {
-                        //cout<<"a "<<a<<" b "<<b<<" bofre minus is"<<relative_map_.at<int8_t>(a, b)<<endl;
-                        if(relative_map_.at<int8_t>(point.x,point.y)>-126)
+                for (int a=point.x-1; a<=point.x+1; a++)
+                {
+                    for (int b=point.y-1; b<=point.y+1; b++)  
+                    {
+                        //cout<<"rela size"<<relative_map_.size()<<"a "<<a<<" b "<<b<<" bofre minus is"<<relative_map_.at<int8_t>(a, b)<<endl;
+                        if(relative_map_.at<int8_t>(a,b)<126)
                         { 
-                        relative_map_.at<int8_t>(point.x,point.y) = relative_map_.at<int8_t>(point.x,point.y)-1;
+                        relative_map_.at<int8_t>(a,b) = relative_map_.at<int8_t>(a,b)+1;
                         }
                         
-                    // }
+                     }
                     
                 }
+            }
             else{
                 cv::Point point = it.pos(); 
-                if(relative_map_.at<int8_t>(point.x, point.y)<126)
-                    relative_map_.at<int8_t>(point.x, point.y) = relative_map_.at<int8_t>(point.x, point.y) + 1;
+                if(relative_map_.at<int8_t>(point.x, point.y)>-126)
+                    relative_map_.at<int8_t>(point.x, point.y) = relative_map_.at<int8_t>(point.x, point.y) - 1;
             }
         }
     }
@@ -115,9 +116,9 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
     {
         for(int j=0; j<width_; j++)
         {
-            if(relative_map_.at<int8_t>(i,j) < -free_threshold_)
+            if(relative_map_.at<int8_t>(i,j) > free_threshold_)
                 map_.at<int8_t>(i,j) =  LETHAL_OBSTACLE;
-            else if(relative_map_.at<int8_t>(i,j) > free_threshold_)
+            else if(relative_map_.at<int8_t>(i,j) < -free_threshold_)
                 map_.at<int8_t>(i,j) = FREE_SPACE;
             else
                 map_.at<int8_t>(i,j) = NO_INFORMATION;
@@ -130,10 +131,10 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
 cv::Mat Mapper::getMapCopy()
 {
     cv::Mat new_mat(height_, width_, CV_8SC1);
-    for(int i=height_-1; i>0; i--)
+    for(int i=0; i<height_; i++)
     {
         for(int j=0; j<width_; j++)
-            new_mat.at<int8_t>(height_-i-1,j)=map_.at<int8_t>(j,i);
+            new_mat.at<int8_t>(i,j)=map_.at<int8_t>(j,i);
     }
 
     //nav_msgs::OccupancyGrid new_map;
